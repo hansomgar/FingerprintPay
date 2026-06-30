@@ -29,7 +29,6 @@ import com.surcumference.fingerprint.R;
 import com.surcumference.fingerprint.adapter.PreferenceAdapter;
 import com.surcumference.fingerprint.network.update.UpdateFactory;
 import com.surcumference.fingerprint.util.Task;
-import com.surcumference.fingerprint.util.Umeng;
 import com.surcumference.fingerprint.util.bugfixer.TagManagerBugFixer;
 import com.surcumference.fingerprint.view.DonateView;
 
@@ -43,7 +42,6 @@ public class HomeActivity extends AppCompatActivity implements AdapterView.OnIte
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Umeng.init(this);
         setContentView(R.layout.home);
 
         ListView listView = (ListView) findViewById(R.id.list);
@@ -63,7 +61,6 @@ public class HomeActivity extends AppCompatActivity implements AdapterView.OnIte
         mListAdapter = new PreferenceAdapter(list);
         listView.setAdapter(mListAdapter);
         listView.setOnItemClickListener(this);
-        Task.onMain(1000L, () -> UpdateFactory.doUpdateCheck(HomeActivity.this));
         TagManagerBugFixer.fix();
     }
 
@@ -97,18 +94,6 @@ public class HomeActivity extends AppCompatActivity implements AdapterView.OnIte
             com.surcumference.fingerprint.util.UrlUtils.openUrl(this, PROJECT_URL);
             Toaster.showLong(Lang.getString(R.id.toast_give_me_star));
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Umeng.onResume(this);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Umeng.onPause(this);
     }
 
     @Override

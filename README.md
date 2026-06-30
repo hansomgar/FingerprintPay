@@ -107,3 +107,100 @@
 <img src="./doc/qq_group.jpg" alt="QQ交流群: [665167891]" width="500">
 
 #### QQ交流群: [665167891](https://h5.qun.qq.com/h5/qun-share-page/?_wv=1027&k=fCZf_WEKL1Rj_N0gi9JgkH7bfnKj11Wy&authKey=acNcoIs325Uco7v2JZY4NObRFA3sJU%2FWI1%2FH64DkP50cn6HBRUzBZ9cvZGNqmzGi&market_channel_source=665167891_1&noverify=0&group_code=665167891)
+
+---
+
+## 2026年7月1日 项目定制化修改总结 (hansomgar)
+
+### 已完成的修改
+
+1. **删除友盟相关功能**
+   - 删除了 `Umeng.java` 文件
+   - 移除了 `HomeActivity.java` 中的友盟初始化和调用
+   - 移除了所有插件（magisk和xposed）中的友盟调用
+
+2. **删除赞助功能，改为显示"已删除赞助"**
+   - 修改了 `DonateView.java`，移除了所有赞助按钮和逻辑
+   - 修改了 `DonateUtils.java`，清空了所有赞助相关代码
+   - 修改了 `HomeActivity.java` 中的赞助入口
+
+3. **删除自动网络请求，仅保留手动检查更新**
+   - 删除了 `HomeActivity.java` 第66行的自动更新检查
+   - 删除了 `UpdateFactory.java` 中的 `lazyUpdateWhenActivityAlive()` 方法
+   - 移除了所有插件中的自动更新调用
+
+4. **修改作者信息为 hansomgar**
+   - 修改了 `Constant.java` 中的作者信息：
+     - ALIPAY_AUTHOR: "hansomgar"
+     - WECHAT_AUTHOR: "hansomgar"
+     - QQ_AUTHOR: "hansomgar"
+     - QQ_AUTHOR_NAME: "hansomgar"
+   - 清空了赞助二维码链接
+
+5. **修改加密加盐值**
+   - 修改了 `Config.java` 第36-38行，在获取设备ID的基础上，前后添加 "hansomgar"
+   - 原代码：`int passwordEncKey = String.valueOf(deviceId).hashCode();`
+   - 新代码：`String saltedDeviceId = "hansomgar" + deviceId + "hansomgar"; int passwordEncKey = saltedDeviceId.hashCode();`
+
+6. **修改版本号**
+   - versionName: 6.1.0 → 6.1.1
+   - versionCode: 37 → 38
+
+7. **修改模块文件名格式**
+   - 修改了 `module/build.sh` 第11行，在模块名称后添加 `-hansomgar`
+   - 修改了 `app/update-json.gradle` 第9行，在更新链接中添加 `-hansomgar`
+   - 修改了 `app/debug.gradle` 第73行，在调试文件名中添加 `-hansomgar`
+   - 新格式：`riru-module-xfingerprint-pay-wechat-hansomgar-v6.1.1-release`
+
+---
+
+## 完整修改Prompt（以后使用）
+
+```
+这是一个 FingerprintPay 项目，请帮我完成以下所有修改：
+
+1. 删除所有友盟相关功能
+   - 删除 app/src/main/java/com/surcumference/fingerprint/util/Umeng.java 文件
+   - 在 HomeActivity.java 中删除所有 Umeng.init()、Umeng.onResume()、Umeng.onPause() 调用
+   - 在所有插件文件（magisk和xposed目录下的插件）中删除所有 Umeng 相关调用
+
+2. 删除所有赞助相关功能，改为显示"已删除赞助"
+   - 修改 DonateView.java，移除所有赞助按钮，只显示一个TextView显示"已删除赞助"
+   - 清空 DonateUtils.java 中的所有赞助相关代码
+   - 修改 HomeActivity.java 中的赞助入口
+
+3. 删除所有自动网络请求，仅保留用户手动点击检查更新的功能
+   - 删除 HomeActivity.java 中的自动更新检查（通常在onCreate或onResume中）
+   - 删除 UpdateFactory.java 中的 lazyUpdateWhenActivityAlive() 方法及其所有调用
+   - 在所有插件文件中删除自动更新调用
+
+4. 修改作者信息为 hansomgar
+   - 修改 Constant.java 中的作者信息：
+     - ALIPAY_AUTHOR: "hansomgar"
+     - WECHAT_AUTHOR: "hansomgar"
+     - QQ_AUTHOR: "hansomgar"
+     - QQ_AUTHOR_NAME: "hansomgar"
+     - 清空所有赞助二维码链接（设置为空字符串）
+
+5. 修改加密加盐值
+   - 修改 Config.java 中 passwordEncKey 的生成逻辑
+   - 在获取 deviceId 后，前后添加 "hansomgar"
+   - 示例：String saltedDeviceId = "hansomgar" + deviceId + "hansomgar";
+   - 然后计算 saltedDeviceId.hashCode() 作为 passwordEncKey
+
+6. 修改版本号
+   - 在 app/build.gradle 中：
+     - versionCode: 在原基础上 +1
+     - versionName: 在原基础上 +0.0.1（例如从6.1.0改为6.1.1）
+
+7. 修改模块文件名格式，添加 -hansomgar 后缀
+   - 修改 module/build.sh 第11行：在 $APP_PRODUCT_TARGET 后添加 -hansomgar
+     原格式：MODULE_LIB_NAME="...-pay-$APP_PRODUCT_TARGET"
+     新格式：MODULE_LIB_NAME="...-pay-$APP_PRODUCT_TARGET-hansomgar"
+   - 修改 app/update-json.gradle 第9行：在 zipUrl 中 $name 后添加 -hansomgar
+   - 修改 app/debug.gradle 第73行：在文件名中 $name.toLowerCase() 后添加 -hansomgar
+
+请确保所有修改都正确完成，并检查没有遗漏的地方。
+```
+
+---

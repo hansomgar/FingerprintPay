@@ -151,21 +151,7 @@ public class UpdateFactory {
                 }).showInDialog();
     }
 
-    public static void lazyUpdateWhenActivityAlive() {
-        int lazyCheckTimeMsec = BuildConfig.DEBUG ? 200 : 6000;
-        Task.onMain(lazyCheckTimeMsec, new Runnable() {
-            @Override
-            public void run() {
-                Activity activity = ApplicationUtils.getCurrentActivity();
-                if (activity == null
-                    || activity.getClass().getName().contains("com.tencent.mm.app.WeChatSplashActivity")) {
-                    Task.onMain(lazyCheckTimeMsec, this);
-                    return;
-                }
-                UpdateFactory.doUpdateCheck(activity);
-            }
-        });
-    }
+
 
     private static boolean isSkipVersion(Context context, String targetVersion) {
         Config config = Config.from(context);

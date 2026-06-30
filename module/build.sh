@@ -8,7 +8,7 @@ MODULE_TEMPLATE="../3rdparty/MagiskModuleTemplate"
 VERSION_NAME=$(cat ../app/build.gradle| grep versionName | sed -E 's/.+"(.+)".*/\1/g')
 VERSION_CODE=$(cat ../app/build.gradle| grep versionCode | sed -E 's/.+versionCode +([0-9]+).*/\1/g')
 APP_PRODUCT_TARGET=$(echo "$MODULE_GRALDE_FILE"|sed -E 's/.+\/(.+)\..+/\1/g')
-MODULE_LIB_NAME="$(echo "$PLUGIN_TYPE_NAME" | tr '[:upper:]' '[:lower:]')-module-xfingerprint-pay-$APP_PRODUCT_TARGET"
+MODULE_LIB_NAME="$(echo "$PLUGIN_TYPE_NAME" | tr '[:upper:]' '[:lower:]')-module-xfingerprint-pay-$APP_PRODUCT_TARGET-hansomgar"
 echo VERSION_NAME: $VERSION_NAME
 echo VERSION_CODE: $VERSION_CODE
 bash ./reset.sh

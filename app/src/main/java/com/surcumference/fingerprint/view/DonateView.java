@@ -4,20 +4,20 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.hjq.toast.Toaster;
-import com.surcumference.fingerprint.Constant;
 import com.surcumference.fingerprint.Lang;
 import com.surcumference.fingerprint.R;
 import com.surcumference.fingerprint.adapter.PreferenceAdapter;
-import com.surcumference.fingerprint.util.DonateUtils;
 import com.surcumference.fingerprint.util.DpUtils;
 
 import java.util.ArrayList;
@@ -51,50 +51,22 @@ public class DonateView extends DialogFrameLayout implements AdapterView.OnItemC
     private void init(Context context) {
         LinearLayout rootVerticalLayout = new LinearLayout(context);
         rootVerticalLayout.setOrientation(LinearLayout.VERTICAL);
+        rootVerticalLayout.setGravity(Gravity.CENTER);
 
-        int defVPadding = DpUtils.dip2px(context, 12);
+        int defVPadding = DpUtils.dip2px(context, 24);
 
-        mListView = new ListView(context);
-        mListView.setDividerHeight(0);
-        mListView.setOnItemClickListener(this);
-        mListView.setPadding(0, defVPadding, 0, defVPadding);
-        mListView.setDivider(new ColorDrawable(Color.TRANSPARENT));
+        TextView textView = new TextView(context);
+        textView.setText("已删除赞助");
+        textView.setTextSize(18);
+        textView.setTextColor(Color.BLACK);
+        textView.setPadding(0, defVPadding, 0, defVPadding);
 
-        mSettingsDataList.add(new PreferenceAdapter.Data(Lang.getString(R.id.settings_title_alipay), Constant.AUTHOR_ALIPAY));
-        if (Constant.PACKAGE_NAME_WECHAT.equals(context.getPackageName())) {
-            mSettingsDataList.add(new PreferenceAdapter.Data(Lang.getString(R.id.settings_title_wechat), Constant.AUTHOR_WECHAT));
-        } else if (Constant.PACKAGE_NAME_QQ.equals(context.getPackageName())) {
-            mSettingsDataList.add(new PreferenceAdapter.Data(Lang.getString(R.id.settings_title_qq), Constant.AUTHOR_QQ));
-        }
-        mListAdapter = new PreferenceAdapter(mSettingsDataList);
-
-        rootVerticalLayout.addView(mListView);
+        rootVerticalLayout.addView(textView);
 
         this.addView(rootVerticalLayout);
     }
 
     @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        mListView.setAdapter(mListAdapter);
-    }
-
-    @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
-        PreferenceAdapter.Data data = mListAdapter.getItem(position);
-        final Context context = getContext();
-        if (Lang.getString(R.id.settings_title_alipay).equals(data.title)) {
-            if (!DonateUtils.openAlipayPayPage(context)) {
-                Toaster.showLong(Lang.getString(R.id.toast_goto_donate_page_fail_alipay));
-            }
-        } else if (Lang.getString(R.id.settings_title_wechat).equals(data.title)) {
-            if (!DonateUtils.openWeChatPay(context)) {
-                Toaster.showLong(Lang.getString(R.id.toast_goto_donate_page_fail_wechat));
-            }
-        } else if (Lang.getString(R.id.settings_title_qq).equals(data.title)) {
-            if (!DonateUtils.openQQPay(context)) {
-                Toaster.showLong(Lang.getString(R.id.toast_goto_donate_page_fail_qq));
-            }
-        }
     }
 }

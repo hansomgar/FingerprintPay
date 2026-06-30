@@ -70,7 +70,7 @@ android.applicationVariants.all { variant ->
                 def moduleTask = tasks.create(name: "${buildTypeName}${name}${framework.capitalize()}", dependsOn: [dexTask]) {
                     doLast {
                         def dexPath = fileTree(dir: new File(project.buildDir, "intermediates/dex/${buildTypeName}"), include: '**/classes.dex').files.sort { it.lastModified() }.last().absolutePath
-                        adbPushToAppFiles(dexPath, "${framework}-module-xfingerprint-pay-${name.toLowerCase()}.dex", packageName)
+                        adbPushToAppFiles(dexPath, "${framework}-module-xfingerprint-pay-${name.toLowerCase()}-hansomgar.dex", packageName)
                     }
                 }
                 moduleTask.finalizedBy(startTask)
