@@ -5,6 +5,10 @@ on:
     - cron: '0 0 */7 * *'
   workflow_dispatch:
 
+concurrency:
+  group: auto-sync-upstream
+  cancel-in-progress: false
+
 jobs:
   sync-and-build:
     runs-on: ubuntu-latest
@@ -18,10 +22,14 @@ jobs:
           ref: nonetwork
           fetch-depth: 0
 
-      - name: Add upstream repository
+      - name: Configure upstream repository
         run: |
-          git remote add upstream https://github.com/eritpchy/FingerprintPay.git
-          git fetch upstream
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream https://github.com/eritpchy/FingerprintPay.git
+          else
+            git remote add upstream https://github.com/eritpchy/FingerprintPay.git
+          fi
+          git fetch upstream main --tags --force
 
       - name: Get latest upstream release tag
         id: get_release
@@ -35,33 +43,47 @@ jobs:
             });
             return release.data.tag_name;
 
-      - name: Check if already synced
+      - name: Check whether sync is needed
         id: check_sync
         run: |
           TAG_NAME="${{ steps.get_release.outputs.result }}"
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "synced=true" >> $GITHUB_OUTPUT
+          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "null" ]; then
+            echo "Unable to resolve the latest upstream release tag."
+            exit 1
+          fi
+
+          TAG_COMMIT="$(git rev-list -n 1 "$TAG_NAME")"
+          if [ -z "$TAG_COMMIT" ]; then
+            echo "Unable to resolve commit for upstream tag $TAG_NAME."
+            exit 1
+          fi
+
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "tag_commit=$TAG_COMMIT" >> $GITHUB_OUTPUT
+
+          if git merge-base --is-ancestor "$TAG_COMMIT" HEAD; then
+            echo "need_sync=false" >> $GITHUB_OUTPUT
+            echo "Upstream release $TAG_NAME is already included in nonetwork."
           else
-            echo "synced=false" >> $GITHUB_OUTPUT
+            echo "need_sync=true" >> $GITHUB_OUTPUT
+            echo "Upstream release $TAG_NAME is not in nonetwork yet."
           fi
 
       - name: Merge upstream main to nonetwork
-        if: steps.check_sync.outputs.synced == 'false'
+        if: steps.check_sync.outputs.need_sync == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git merge upstream/main --no-edit
           git push origin nonetwork
 
-      - name: Trigger Android Release build
-        if: steps.check_sync.outputs.synced == 'false'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'androidRelease.yml',
-              ref: 'nonetwork'
-            });
+      - name: Explain build trigger
+        if: steps.check_sync.outputs.need_sync == 'true'
+        run: |
+          echo "Upstream merge has been pushed to nonetwork."
+          echo "androidRelease.yml will build and publish automatically from the nonetwork push trigger."
+
+      - name: Explain no-op result
+        if: steps.check_sync.outputs.need_sync != 'true'
+        run: |
+          echo "No new upstream release needs to be synced."
