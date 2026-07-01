@@ -1,0 +1,65 @@
+name: Auto Sync Upstream and Release1
+
+on:
+  # 1. 定时触发：每隔 7天 检查一次
+  schedule:
+    - cron: '0 0 */7 * *'
+  # 2. 手动触发：方便你随时测试
+  workflow_dispatch:
+
+jobs:
+  sync-and-build:
+    runs-on: ubuntu-latest
+    # 授予写入权限，用于推送代码和创建 Release
+    permissions:
+      contents: write
+
+    steps:
+      # 1. 检出你的 nonetwork 分支
+      - name: Checkout nonetwork branch
+        uses: actions/checkout@v4
+        with:
+          ref: nonetwork
+          fetch-depth: 0
+
+      # 2. 添加原项目为上游仓库
+      - name: Add upstream repository
+        run: |
+          git remote add upstream https://github.com/eritpchy/FingerprintPay.git
+          git fetch upstream
+
+      # 3. 获取上游最新 Release 的 Tag 名称
+      - name: Get latest upstream release tag
+        id: get_release
+        run: |
+          LATEST_TAG=$(gh release list --repo eritpchy/FingerprintPay --limit 1 --json tagName --jq '.[0].tagName')
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # 4. 检查本地是否已经处理过这个 Tag
+      - name: Check if already synced
+        id: check_sync
+        run: |
+          if git rev-parse "upstream/${{ steps.get_release.outputs.latest_tag }}" >/dev/null 2>&1; then
+            echo "already_synced=false" >> $GITHUB_OUTPUT
+          else
+            echo "already_synced=true" >> $GITHUB_OUTPUT
+          fi
+
+      # 5. 如果有新 Release，则合并上游 main 分支到 nonetwork
+      - name: Merge upstream main into nonetwork
+        if: steps.check_sync.outputs.already_synced == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git merge upstream/main --no-edit
+          git push origin nonetwork
+
+      # 6. 触发你的 Android 编译工作流
+      - name: Trigger Android build
+        if: steps.check_sync.outputs.already_synced == 'true'
+        run: |
+          gh workflow run androidRelease.yml --ref nonetwork
+        env:
+          GH_TOKEN: ${{ github.token }}
