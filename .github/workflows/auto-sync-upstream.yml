@@ -69,18 +69,81 @@ jobs:
             echo "Upstream release $TAG_NAME is not in nonetwork yet."
           fi
 
-      - name: Merge upstream main to nonetwork
+      - name: Merge upstream release into nonetwork
         if: steps.check_sync.outputs.need_sync == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git merge upstream/main --no-edit
+          TAG_NAME="${{ steps.check_sync.outputs.tag_name }}"
+          TAG_COMMIT="${{ steps.check_sync.outputs.tag_commit }}"
+          git merge "$TAG_COMMIT" --no-ff -m "Sync upstream release ${TAG_NAME} into nonetwork"
+
+      - name: Keep nonetwork version ahead of upstream
+        if: steps.check_sync.outputs.need_sync == 'true'
+        run: |
+          TAG_NAME="${{ steps.check_sync.outputs.tag_name }}"
+          TAG_COMMIT="${{ steps.check_sync.outputs.tag_commit }}"
+          UPSTREAM_BUILD="$(git show "${TAG_COMMIT}:app/build.gradle")"
+          UPSTREAM_VERSION_NAME="$(printf '%s\n' "$UPSTREAM_BUILD" | sed -n 's/.*versionName "\(.*\)".*/\1/p' | head -n 1)"
+          UPSTREAM_VERSION_CODE="$(printf '%s\n' "$UPSTREAM_BUILD" | sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' | head -n 1)"
+
+          if [ -z "$UPSTREAM_VERSION_NAME" ] || [ -z "$UPSTREAM_VERSION_CODE" ]; then
+            echo "Unable to read upstream version information."
+            exit 1
+          fi
+
+          IFS='.' read -r -a VERSION_PARTS <<< "$UPSTREAM_VERSION_NAME"
+          LAST_INDEX=$((${#VERSION_PARTS[@]} - 1))
+          VERSION_PARTS[$LAST_INDEX]=$((${VERSION_PARTS[$LAST_INDEX]} + 1))
+          NONETWORK_VERSION_NAME="$(IFS=.; echo "${VERSION_PARTS[*]}")"
+          NONETWORK_VERSION_CODE=$((UPSTREAM_VERSION_CODE + 1))
+
+          python3 - "$NONETWORK_VERSION_NAME" "$NONETWORK_VERSION_CODE" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          version_name = sys.argv[1]
+          version_code = sys.argv[2]
+          path = pathlib.Path("app/build.gradle")
+          text = path.read_text(encoding="utf-8")
+          text = re.sub(r'versionCode\s+\d+', f"versionCode {version_code}", text, count=1)
+          text = re.sub(r'versionName\s+"[^"]+"', f'versionName "{version_name}"', text, count=1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git add app/build.gradle
+          if ! git diff --cached --quiet; then
+            git commit -m "Keep nonetwork version ahead of upstream ${TAG_NAME}"
+          fi
+
+      - name: Verify nonetwork customizations
+        if: steps.check_sync.outputs.need_sync == 'true'
+        run: |
+          test ! -f app/src/main/java/com/surcumference/fingerprint/util/Umeng.java
+          ! grep -q 'lazyUpdateWhenActivityAlive' app/src/main/java/com/surcumference/fingerprint/network/update/UpdateFactory.java
+          grep -q '已删除赞助' app/src/main/java/com/surcumference/fingerprint/view/DonateView.java
+          grep -q 'AUTHOR_ALIPAY = "hansomgar"' app/src/main/java/com/surcumference/fingerprint/Constant.java
+          grep -q 'AUTHOR_WECHAT = "hansomgar"' app/src/main/java/com/surcumference/fingerprint/Constant.java
+          grep -q 'AUTHOR_QQ = "hansomgar"' app/src/main/java/com/surcumference/fingerprint/Constant.java
+          grep -q 'AUTHOR_QQ_NAME = "hansomgar"' app/src/main/java/com/surcumference/fingerprint/Constant.java
+          grep -q 'DONATE_ID_ALIPAY = ""' app/src/main/java/com/surcumference/fingerprint/Constant.java
+          grep -q 'DONATE_ID_WECHAT = ""' app/src/main/java/com/surcumference/fingerprint/Constant.java
+          grep -q '"hansomgar" + deviceId + "hansomgar"' app/src/main/java/com/surcumference/fingerprint/util/Config.java
+          grep -q -- '-hansomgar' module/build.sh
+          grep -q -- '-hansomgar' app/update-json.gradle
+          grep -q -- '-hansomgar' app/debug.gradle
+
+      - name: Push merged nonetwork branch
+        if: steps.check_sync.outputs.need_sync == 'true'
+        run: |
           git push origin nonetwork
 
       - name: Explain build trigger
         if: steps.check_sync.outputs.need_sync == 'true'
         run: |
-          echo "Upstream merge has been pushed to nonetwork."
+          echo "Upstream release ${{ steps.check_sync.outputs.tag_name }} has been merged into nonetwork."
+          echo "The resulting branch keeps the nonetwork version one step ahead of upstream."
           echo "androidRelease.yml will build and publish automatically from the nonetwork push trigger."
 
       - name: Explain no-op result
